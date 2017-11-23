@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PopularMovies</string>
+
+    <string name="action_sort_by_popular">Popular</string>
+    <string name="action_sort_by_rating">Top rated</string>
+
+    <string name="movie_poster">Image of the movie poster</string>
+    <string name="movie_poster_thumb">Thumbnail of the movie poster</string>
+</resources>
