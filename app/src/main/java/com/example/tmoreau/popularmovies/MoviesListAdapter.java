@@ -25,7 +25,7 @@ public class MoviesListAdapter extends RecyclerView.Adapter<MoviesListAdapter.Mo
     private final MoviesListAdapterOnClickHandler mClickHandler;
 
     public interface MoviesListAdapterOnClickHandler {
-        void onClick(String movieId);
+        void onClick(Movie movie);
     }
 
     public MoviesListAdapter(Context context, MoviesListAdapterOnClickHandler clickHandler) {
@@ -53,8 +53,8 @@ public class MoviesListAdapter extends RecyclerView.Adapter<MoviesListAdapter.Mo
         @Override
         public void onClick(View view) {
             int position = getAdapterPosition();
-            String movieId = mMoviesList.get(position).getId();
-            mClickHandler.onClick(movieId);
+            Movie movie = mMoviesList.get(position);
+            mClickHandler.onClick(movie);
         }
     }
 

@@ -1,10 +1,15 @@
 package com.example.tmoreau.popularmovies;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import static java.lang.System.out;
+
 /**
  * Created by t.moreau on 23/11/2017.
  */
 
-public class Movie {
+public class Movie implements Parcelable {
     private String mId;
     private String mTitle;
     private String mImage;
@@ -13,10 +18,6 @@ public class Movie {
     private String mRating;
     private boolean mHasVideo;
 
-    public Movie(String id, String image) {
-        mId = id;
-        mImage = image;
-    }
 
     public Movie(String mId, String mTitle, String mImage, String mOverview, String mReleaseDate, String mRating, boolean hasVideo) {
         this.mId = mId;
@@ -73,4 +74,42 @@ public class Movie {
     public boolean hasVideo() {
         return mHasVideo;
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.mId);
+        dest.writeString(this.mTitle);
+        dest.writeString(this.mImage);
+        dest.writeString(this.mOverview);
+        dest.writeString(this.mReleaseDate);
+        dest.writeString(this.mRating);
+        dest.writeByte(this.mHasVideo ? (byte) 1 : (byte) 0);
+    }
+
+    protected Movie(Parcel in) {
+        this.mId = in.readString();
+        this.mTitle = in.readString();
+        this.mImage = in.readString();
+        this.mOverview = in.readString();
+        this.mReleaseDate = in.readString();
+        this.mRating = in.readString();
+        this.mHasVideo = in.readByte() != 0;
+    }
+
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
+        @Override
+        public Movie createFromParcel(Parcel source) {
+            return new Movie(source);
+        }
+
+        @Override
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
 }
