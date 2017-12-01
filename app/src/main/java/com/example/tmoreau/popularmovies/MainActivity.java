@@ -1,6 +1,9 @@
 package com.example.tmoreau.popularmovies;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -28,11 +31,12 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private ProgressBar mPbLoadingIndicator;
+    private TextView mConnectionErrorTextView;
     private RecyclerView mRecyclerView;
     private GridLayoutManager mGridLayoutManager;
     private MoviesListAdapter mMovieListAdapter;
 
-    private ArrayList<Movie> mMoviesList;
+    private boolean mIsConnected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,20 +44,35 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
         setContentView(R.layout.activity_main);
 
         mPbLoadingIndicator = findViewById(R.id.pb_loading_indicator);
+        mConnectionErrorTextView = findViewById(R.id.tv_connection_error);
         mRecyclerView = findViewById(R.id.rv_movies_list);
 
         mGridLayoutManager = new GridLayoutManager(this, 2);
         mRecyclerView.setLayoutManager(mGridLayoutManager);
         mMovieListAdapter = new MoviesListAdapter(this, this);
         mRecyclerView.setAdapter(mMovieListAdapter);
+        mConnectionErrorTextView.setText(R.string.connection_error);
 
-        mMoviesList = new ArrayList<>();
+        ConnectivityManager cm =
+                (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
 
+        try {
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            mIsConnected = activeNetwork != null &&
+                    activeNetwork.isConnectedOrConnecting();
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
         loadMovieData("popular");
     }
 
     private void loadMovieData(String sortBy) {
-        new FetchMoviesTask().execute(sortBy);
+        if (mIsConnected) {
+            mConnectionErrorTextView.setVisibility(View.GONE);
+            new FetchMoviesTask(new FetchMoviesTaskListener()).execute(sortBy);
+        } else {
+            mConnectionErrorTextView.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
@@ -63,56 +82,19 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
         startActivity(intent);
     }
 
-    public class FetchMoviesTask extends AsyncTask<String, Void, Void> {
+    public class FetchMoviesTaskListener implements AsyncTaskListener<ArrayList<Movie>> {
         @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+        public void onTaskStarted() {
             mPbLoadingIndicator.setVisibility(View.VISIBLE);
         }
 
         @Override
-        protected Void doInBackground(String... strings) {
-            if (strings.length == 0)
-                return null;
-
-            String sortBy = strings[0];
-            URL movieRequestUrl = NetworkUtils.buildMoviesListUrl(sortBy);
-
-            try {
-                String jsonMovieResponse = NetworkUtils
-                        .getResponseFromHttpUrl(movieRequestUrl);
-
-                Log.v(TAG, "Response : " + jsonMovieResponse);
-
-                JSONObject jsonMoviesList = new JSONObject(jsonMovieResponse);
-
-                JSONArray movies = jsonMoviesList.getJSONArray("results");
-
-                mMoviesList.clear();
-
-                for (int i = 0; i < movies.length(); i++) {
-                    JSONObject movie = movies.getJSONObject(i);
-
-                    String id = movie.getString("id");
-                    String image = movie.getString("poster_path");
-
-                    Movie movieObject = new Movie(id, image);
-                    mMoviesList.add(movieObject);
-                }
-
-                return null;
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
-            mPbLoadingIndicator.setVisibility(View.INVISIBLE);
-            mMovieListAdapter.setMoviesList(mMoviesList);
+        public void onTaskCompleted(ArrayList<Movie> result) {
+            mPbLoadingIndicator.setVisibility(View.GONE);
+            if (result != null)
+                mMovieListAdapter.setMoviesList(result);
+            else
+                mConnectionErrorTextView.setVisibility(View.VISIBLE);
         }
     }
 

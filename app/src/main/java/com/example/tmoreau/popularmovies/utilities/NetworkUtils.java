@@ -3,6 +3,8 @@ package com.example.tmoreau.popularmovies.utilities;
 import android.net.Uri;
 import android.util.Log;
 
+import com.example.tmoreau.popularmovies.BuildConfig;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -31,7 +33,7 @@ public final class NetworkUtils {
             "http://image.tmdb.org/t/p/w185";
 
     // replace this with your personal API key
-    private static final String API_KEY = "";
+    private static final String API_KEY = BuildConfig.API_KEY;
 
     private static final String API_KEY_PARAM = "api_key";
 

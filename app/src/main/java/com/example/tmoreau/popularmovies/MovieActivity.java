@@ -28,7 +28,6 @@ public class MovieActivity extends AppCompatActivity {
     private TextView overviewView;
     private TextView userRatingView;
     private TextView releaseDateView;
-    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
