@@ -27,8 +27,12 @@ public final class NetworkUtils {
     private static final String TOP_RATED_MOVIES_URL = MOVIES_BASE_URL +
             "/movie/top_rated";*/
 
+    private static final String VIDEO_PATH = "videos";
     private static final String IMAGE_BASE_URL =
             "http://image.tmdb.org/t/p/w185";
+
+    private static final String YOUTUBE_BASE_URL = "https://www.youtube.com/watch";
+    private static final String YOUTUBE_WATCH_PARAM = "v";
 
     // replace this with your personal API key
     private static final String API_KEY = "";
@@ -38,6 +42,42 @@ public final class NetworkUtils {
     public static URL buildMoviesListUrl(String sortBy) {
         Uri builtUri = Uri.parse(MOVIES_BASE_URL).buildUpon()
                 .appendPath(sortBy)
+                .appendQueryParameter(API_KEY_PARAM, API_KEY)
+                .build();
+
+        URL url = null;
+        try {
+            url = new URL(builtUri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        Log.v(TAG, "Built URI " + url);
+
+        return url;
+    }
+
+    public static URL buildYouTubeUrl(String key) {
+        Uri builtUri = Uri.parse(YOUTUBE_BASE_URL).buildUpon()
+                .appendQueryParameter(YOUTUBE_WATCH_PARAM, key)
+                .build();
+
+        URL url = null;
+        try {
+            url = new URL(builtUri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        Log.v(TAG, "Built URI " + url);
+
+        return url;
+    }
+
+    public static URL buildVideosUrl(String sortBy) {
+        Uri builtUri = Uri.parse(MOVIES_BASE_URL).buildUpon()
+                .appendPath(sortBy)
+                .appendPath(VIDEO_PATH)
                 .appendQueryParameter(API_KEY_PARAM, API_KEY)
                 .build();
 

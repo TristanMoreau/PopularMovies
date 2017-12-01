@@ -1,5 +1,7 @@
 package com.example.tmoreau.popularmovies;
 
+import java.util.ArrayList;
+
 /**
  * Created by t.moreau on 23/11/2017.
  */
@@ -12,10 +14,16 @@ public class Movie {
     private String mReleaseDate;
     private String mRating;
     private boolean mHasVideo;
+    private ArrayList<Trailer> mTrailers;
+
+    public Movie() {
+        mTrailers = new ArrayList<>();
+    }
 
     public Movie(String id, String image) {
         mId = id;
         mImage = image;
+        mTrailers = new ArrayList<>();
     }
 
     public Movie(String mId, String mTitle, String mImage, String mOverview, String mReleaseDate, String mRating, boolean hasVideo) {
@@ -26,6 +34,7 @@ public class Movie {
         this.mReleaseDate = mReleaseDate;
         this.mRating = mRating;
         this.mHasVideo = hasVideo;
+        mTrailers = new ArrayList<>();
     }
 
     public String getId() {
@@ -60,6 +69,10 @@ public class Movie {
         this.mOverview = mOverview;
     }
 
+    public void setRating(String rating) {
+        mRating = rating;
+    }
+
     public String getRating() { return mRating; }
 
     public String getReleaseDate() {
@@ -70,7 +83,23 @@ public class Movie {
         this.mReleaseDate = mReleaseDate;
     }
 
+    public void setHasVideo(boolean hasVideo) {
+        mHasVideo = hasVideo;
+    }
+
     public boolean hasVideo() {
         return mHasVideo;
+    }
+
+    public ArrayList<Trailer> getTrailers() {
+        return mTrailers;
+    }
+
+    public void addTrailer(Trailer trailer) {
+        mTrailers.add(trailer);
+    }
+
+    public int getNumberOfTrailers() {
+        return mTrailers.size();
     }
 }

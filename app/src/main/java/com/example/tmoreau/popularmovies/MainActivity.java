@@ -1,7 +1,12 @@
 package com.example.tmoreau.popularmovies;
 
+import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
@@ -15,13 +20,25 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.example.tmoreau.popularmovies.utilities.NetworkUtils;
+import com.facebook.stetho.Stetho;
+import com.facebook.stetho.okhttp3.StethoInterceptor;
+import com.squareup.leakcanary.LeakCanary;
+import com.squareup.leakcanary.RefWatcher;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements MoviesListAdapter.MoviesListAdapterOnClickHandler {
 
@@ -32,12 +49,25 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
     private GridLayoutManager mGridLayoutManager;
     private MoviesListAdapter mMovieListAdapter;
 
-    private ArrayList<Movie> mMoviesList;
+    //private static final int MOVIES_LOADER_ID = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Stetho.initialize(
+                Stetho.newInitializerBuilder(this)
+                        .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
+                        .enableWebKitInspector(Stetho.defaultInspectorModulesProvider(this))
+                        .build());
+
+        if (LeakCanary.isInAnalyzerProcess(this)) {
+            // This process is dedicated to LeakCanary for heap analysis.
+            // You should not init your app in this process.
+            return;
+        }
+        LeakCanary.install(getApplication());
 
         mPbLoadingIndicator = findViewById(R.id.pb_loading_indicator);
         mRecyclerView = findViewById(R.id.rv_movies_list);
@@ -47,13 +77,7 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
         mMovieListAdapter = new MoviesListAdapter(this, this);
         mRecyclerView.setAdapter(mMovieListAdapter);
 
-        mMoviesList = new ArrayList<>();
-
-        loadMovieData("popular");
-    }
-
-    private void loadMovieData(String sortBy) {
-        new FetchMoviesTask().execute(sortBy);
+        getMovies("popular");
     }
 
     @Override
@@ -63,57 +87,72 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
         startActivity(intent);
     }
 
-    public class FetchMoviesTask extends AsyncTask<String, Void, Void> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mPbLoadingIndicator.setVisibility(View.VISIBLE);
-        }
+    public void getMovies(String sortBy) {
+        showSpinner();
 
-        @Override
-        protected Void doInBackground(String... strings) {
-            if (strings.length == 0)
-                return null;
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .addNetworkInterceptor(new StethoInterceptor())
+                .build();
 
-            String sortBy = strings[0];
-            URL movieRequestUrl = NetworkUtils.buildMoviesListUrl(sortBy);
+        URL url = NetworkUtils.buildMoviesListUrl(sortBy);
 
-            try {
-                String jsonMovieResponse = NetworkUtils
-                        .getResponseFromHttpUrl(movieRequestUrl);
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
 
-                Log.v(TAG, "Response : " + jsonMovieResponse);
-
-                JSONObject jsonMoviesList = new JSONObject(jsonMovieResponse);
-
-                JSONArray movies = jsonMoviesList.getJSONArray("results");
-
-                mMoviesList.clear();
-
-                for (int i = 0; i < movies.length(); i++) {
-                    JSONObject movie = movies.getJSONObject(i);
-
-                    String id = movie.getString("id");
-                    String image = movie.getString("poster_path");
-
-                    Movie movieObject = new Movie(id, image);
-                    mMoviesList.add(movieObject);
-                }
-
-                return null;
-
-            } catch (Exception e) {
+        okHttpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
-                return null;
             }
-        }
 
-        @Override
-        protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
-            mPbLoadingIndicator.setVisibility(View.INVISIBLE);
-            mMovieListAdapter.setMoviesList(mMoviesList);
-        }
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful()) {
+                    throw new IOException("Unexpected code " + response);
+                } else {
+                    Log.v(TAG, "Response : " + response);
+                    final ArrayList<Movie> moviesList = new ArrayList<>();
+
+                    try {
+
+                        Thread.sleep(4000);
+                        JSONObject jsonMoviesList = new JSONObject(response.body().string());
+                        JSONArray movies = jsonMoviesList.getJSONArray("results");
+
+                        for (int i = 0; i < movies.length(); i++) {
+                            JSONObject movie = movies.getJSONObject(i);
+
+                            String id = movie.getString("id");
+                            String image = movie.getString("poster_path");
+
+                            Movie movieObject = new Movie(id, image);
+                            moviesList.add(movieObject);
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mMovieListAdapter.setMoviesList(moviesList);
+                                    hideSpinner();
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+
+    private void showSpinner() {
+        mPbLoadingIndicator.setVisibility(View.VISIBLE);
+        mRecyclerView.setVisibility(View.INVISIBLE);
+    }
+
+    private void hideSpinner() {
+        mPbLoadingIndicator.setVisibility(View.INVISIBLE);
+        mRecyclerView.setVisibility(View.VISIBLE);
     }
 
     @Override
@@ -132,12 +171,13 @@ public class MainActivity extends AppCompatActivity implements MoviesListAdapter
         int id = item.getItemId();
 
         if (id == R.id.action_sort_by_popular) {
-            loadMovieData("popular");
+            getMovies("popular");
+
             return true;
         }
 
         if (id == R.id.action_sort_by_rating) {
-            loadMovieData("top_rated");
+            getMovies("top_rated");
             return true;
         }
 
